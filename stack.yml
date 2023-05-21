@@ -1,0 +1,122 @@
+version: '3.7'
+services:
+  api-cron:
+    image: testtussaacr.azurecr.io/api-cron:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname==test-manager 
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - tussa-network
+    secrets:
+      - acr-auth-config
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname==test-manager
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    ports:
+      - "9200:9200"
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - action.auto_create_index=false
+    networks:
+      - tussa-network
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  grafana:
+    image: testtussaacr.azurecr.io/grafana:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname==test-manager
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    ports:
+      - "3000:3000"
+    networks:
+      - tussa-network
+    depends_on:
+      - elasticsearch
+      - api-cron
+    environment:
+      GF_AUTH_AZUREAD_NAME: "Azure AD"
+      GF_AUTH_AZUREAD_ENABLED: "true"
+      GF_AUTH_AZUREAD_ALLOW_SIGN_UP: "true"
+      GF_AUTH_AZUREAD_AUTO_LOGIN: "false"
+      GF_AUTH_AZUREAD_CLIENT_ID: "${GF_CLIENT_ID}"
+      GF_AUTH_AZUREAD_CLIENT_SECRET: "${GF_CLIENT_SECRET}"
+      GF_AUTH_AZUREAD_SCOPES: "openid email profile"
+      GF_AUTH_AZUREAD_AUTH_URL: "https://login.microsoftonline.com/${TUSSA_AZURE_TENANT}/oauth2/v2.0/authorize"
+      GF_AUTH_AZUREAD_TOKEN_URL: "https://login.microsoftonline.com/${TUSSA_AZURE_TENANT}/oauth2/v2.0/token"
+      GF_AUTH_AZUREAD_ALLOWED_GROUPS: "5e48474c-9f67-40d3-81e6-f9ec6298aa1b,2bc480c5-4437-4463-849c-87cc2be788ec,c750cecf-6be0-429b-93d3-1973b76945a7"
+      GF_AUTH_AZUREAD_ROLE_ATTRIBUTE_STRICT: "false"
+      GF_AUTH_AZUREAD_ALLOW_ASSIGN_GRAFANA_ADMIN: "true"
+      GF_AUTH_AZUREAD_SKIP_ORG_ROLE_SYNC: "true"
+      GF_SERVER_ROOT_URL: "https://securityportal.tikt.no"
+
+  nginx:
+    image: nginx:stable
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname==test-ngnix
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - tussa-network
+    secrets:
+      - fullchain_pem
+      - privkey_pem
+    volumes:
+      - /home/test-nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - /home/test-nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - grafana
+
+networks:
+  tussa-network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+
+secrets:
+  acr-auth-config:
+    external: true
+  fullchain_pem:
+    external: true
+  privkey_pem:
+    external: true
+
+volumes:
+  elasticsearch_data:
+    external: true

@@ -1,0 +1,18 @@
+{
+  "name": "grafana-init",
+  "version": "1.0.0",
+  "description": "",
+  "main": "grafana-setup.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/identity": "^3.1.4",
+    "@azure/keyvault-secrets": "^4.7.0",
+    "axios": "^1.3.6",
+    "express": "^4.18.2",
+    "qs": "^6.11.1"
+  }
+}
