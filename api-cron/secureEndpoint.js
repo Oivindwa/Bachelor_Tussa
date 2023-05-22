@@ -6,7 +6,7 @@ const ciscoDevices = "https://api.eu.amp.cisco.com/v1/computers";
 //API call to retrieve device information 
 const secureEndpointDevices = async (clientId, clientSecret) => {
     if (!clientId || !clientSecret) {
-        return []; // return an empty array if clientId or clientSecret is missing
+        return [];
     }
     try {
         const encodedAuthToken = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
@@ -16,7 +16,7 @@ const secureEndpointDevices = async (clientId, clientSecret) => {
             Authorization: encodedAuthToken,
         };
         const { data } = await axios.get(ciscoDevices, { headers });
-        return data.data; // returns object
+        return data.data; 
 
     } catch (error) {
         console.error(error);
